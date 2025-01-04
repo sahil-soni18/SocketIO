@@ -1,10 +1,21 @@
-import React from "react";
+import React, { useContext } from "react";
+import { GameContext } from "../context/GameContext";
 
-const ResultDisplay = ({ result }) => {
+const ResultDisplay = () => {
+  const { result, playerChoice, opponentChoice } = useContext(GameContext);
+
   return (
     <div className="result-display">
-      <h3>Result</h3>
-      <p>{result}</p>
+      <h2>Game Result</h2>
+      {result ? (
+        <>
+          <p>You chose: {playerChoice}</p>
+          <p>Opponent chose: {opponentChoice}</p>
+          <p>Result: <strong>{result}</strong></p>
+        </>
+      ) : (
+        <p>Waiting for opponent...</p>
+      )}
     </div>
   );
 };

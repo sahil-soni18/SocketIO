@@ -2,86 +2,136 @@
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
-import determineWinner from "./game.js"
+import determineMultiplayerWinner from "./Multiplayer.js"; // Function to determine multiplayer winner
 import cors from "cors";
-import determineMultiplayerWinner from "./Multiplayer.js";
 
 const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "http://localhost:5173", // Allow Vite dev server
-        methods: ["GET", "POST"],
-      },
+  cors: {
+    origin: "http://localhost:5173", // Allow Vite dev server
+    methods: ["GET", "POST"],
+  },
 });
 
 // Serve static files from the React app
 app.use(express.static("../frontend/dist"));
 
+const roomData = {}; // To store room and player choices
 
-const roomData = {};
-// Handle socket connections
 io.on("connection", (socket) => {
-  console.log("A User Connected: ", socket.id);
+  console.log("A user connected:", socket.id);
 
+  // Handle joining a room
   socket.on("joinRoom", (room) => {
-    socket.join(room);
     console.log(`User ${socket.id} joined room: ${room}`);
-    io.to(room).emit("message", `User ${socket.id} has joined room: ${room}`);
+    
+    if (!roomData[room]) {
+      roomData[room] = { players: [], choices: {} };
+    }
+    
+    console.log("Room Data: ", roomData);
+    
+    
+    // Add player to the room
+    if (!roomData[room].players.includes(socket.id)) {
+      roomData[room].players.push(socket.id);
+    }
+    socket.join(room);
+    console.log(`Room Data: `, roomData);
+
+  // Notify the client about the room state
+  io.to(room).emit("roomState", {
+    players: roomData[room].players,
+    choices: roomData[room].choices,
+  });
   });
 
+  // Handle player choice
   socket.on("playerChoice", ({ room, choice }) => {
-    if (!roomData[room]) {
-      roomData[room] = {};
-    }
+    if (!roomData[room]) return;
 
-    roomData[room][socket.id] = choice;
+    roomData[room].choices[socket.id] = choice;
 
-    // Check if two players have chosen
-    if (Object.keys(roomData[room]).length === 2) {
-      const players = Object.keys(roomData[room]);
-      const player1Choice = roomData[room][players[0]];
-      const player2Choice = roomData[room][players[1]];
+    // Check if both players have chosen
+    if (
+      Object.keys(roomData[room].choices).length === 2 &&
+      roomData[room].players.length === 2
+    ) {
+      const [player1, player2] = roomData[room].players;
+      const player1Choice = roomData[room].choices[player1];
+      const player2Choice = roomData[room].choices[player2];
+
+      console.log("Player 1:", player1Choice);
+      console.log("Player 2:", player2Choice);
 
       const result = determineMultiplayerWinner(player1Choice, player2Choice);
-      io.to(room).emit("gameResult", result);
 
-      // Reset room data
-      roomData[room] = {};
+      // Emit game result to the room
+      io.to(room).emit("gameResult", {
+        result,
+        player1: { id: player1, choice: player1Choice },
+        player2: { id: player2, choice: player2Choice },
+      });
+
+      // Reset room choices for next round
+      roomData[room].choices = {};
     }
   });
 
+  // Handle "play again" logic
+  socket.on("playAgain", (room) => {
+    if (roomData[room]) {
+      roomData[room].choices = {}; // Reset choices for the room
+      io.to(room).emit("resetGame");
+    }
+  });
+
+  // Handle leaving a room
   socket.on("leaveRoom", (room) => {
     socket.leave(room);
     console.log(`User ${socket.id} left room: ${room}`);
-    io.to(room).emit("message", `User ${socket.id} has left room: ${room}`);
+
+    if (roomData[room]) {
+      roomData[room].players = roomData[room].players.filter(
+        (player) => player !== socket.id
+      );
+
+      // Notify other players in the room
+      io.to(room).emit("message", `User ${socket.id} has left room: ${room}`);
+
+      // Clean up room if empty
+      if (roomData[room].players.length === 0) {
+        delete roomData[room];
+      }
+    }
   });
 
-  socket.on("player-choice", (choice) => {
-    console.log(`Player's Choice: ${choice}`);
-    // Randomly generate the computer's choice
-    const computerChoice = ["rock", "paper", "scissors"][Math.floor(Math.random() * 3)];
-    console.log(`Computer's Choice: ${computerChoice}`);
-
-    // Determine the winner
-    const result = determineWinner(choice, computerChoice);
-    io.emit("game-result", {
-      result,
-      playerChoice: choice,
-      computerChoice,
-      winner: result === "player" ? "player" : result === "computer" ? "computer" : "none",
-    });
-  });
-
-  socket.on("playAgain", (room) => {
-    io.to(room).emit("resetGame");
-  });
-  
-
+  // Handle user disconnection
   socket.on("disconnect", () => {
-    console.log("A User Disconnected: ", socket.id);
+    console.log("A user disconnected:", socket.id);
+
+    // Remove the user from any room they were part of
+    for (const room in roomData) {
+      if (roomData[room].players.includes(socket.id)) {
+        roomData[room].players = roomData[room].players.filter(
+          (player) => player !== socket.id
+        );
+        
+        io.to(room).emit("message", `User ${socket.id} disconnected`);
+        io.to(room).emit("roomState", {
+          players: roomData[room].players,
+          choices: roomData[room].choices,
+        });
+
+        // Clean up room if empty
+        if (roomData[room].players.length === 0) {
+          delete roomData[room];
+        }
+      }
+    }
   });
 });
 

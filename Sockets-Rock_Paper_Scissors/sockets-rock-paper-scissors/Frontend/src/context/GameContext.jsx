@@ -6,16 +6,18 @@ export const GameContext = createContext();
 
 export const GameProvider = ({ children }) => {
   const [room, setRoom] = useState("");
-  const [score, setScore] = useState({ player: 0, computer: 0 });
+  const [score, setScore] = useState({ player: 0, opponent: 0 });
   const [result, setResult] = useState("");
   const [playerChoice, setPlayerChoice] = useState("");
-  const [computerChoice, setComputerChoice] = useState("");
+  const [opponentChoice, setOpponentChoice] = useState("");
+  const [players, setPlayers] = useState([]); // New state to track players in the room
 
   useEffect(() => {
+    // Listen for game results
     socket.on("game-result", (gameResult) => {
       setResult(gameResult.result);
       setPlayerChoice(gameResult.playerChoice);
-      setComputerChoice(gameResult.computerChoice);
+      setOpponentChoice(gameResult.opponentChoice);
 
       setScore((prevScore) => ({
         ...prevScore,
@@ -23,8 +25,14 @@ export const GameProvider = ({ children }) => {
       }));
     });
 
+    // Listen for room state updates
+    socket.on("roomState", (state) => {
+      setPlayers(state.players); // Update the players list
+    });
+
     return () => {
       socket.off("game-result");
+      socket.off("roomState");
     };
   }, []);
 
@@ -36,7 +44,7 @@ export const GameProvider = ({ children }) => {
   const playAgain = () => {
     setResult("");
     setPlayerChoice("");
-    setComputerChoice("");
+    setOpponentChoice("");
     socket.emit("playAgain", room);
   };
 
@@ -47,7 +55,8 @@ export const GameProvider = ({ children }) => {
         score,
         result,
         playerChoice,
-        computerChoice,
+        opponentChoice,
+        players, // Expose players in the context
         joinRoom,
         playAgain,
         setRoom,
@@ -57,6 +66,7 @@ export const GameProvider = ({ children }) => {
     </GameContext.Provider>
   );
 };
+
 
 // Define prop types
 GameProvider.propTypes = {

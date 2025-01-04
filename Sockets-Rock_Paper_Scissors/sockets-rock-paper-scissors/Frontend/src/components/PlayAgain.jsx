@@ -2,9 +2,13 @@ import React, { useContext } from "react";
 import { GameContext } from "../context/GameContext";
 
 const PlayAgainButton = () => {
-  const { playAgain } = useContext(GameContext);
+  const { playAgain, result } = useContext(GameContext);
 
-  return <button onClick={playAgain}>Play Again</button>;
+  return (
+    <div className="play-again">
+      {result && <button onClick={playAgain}>Play Again</button>}
+    </div>
+  );
 };
 
 export default PlayAgainButton;

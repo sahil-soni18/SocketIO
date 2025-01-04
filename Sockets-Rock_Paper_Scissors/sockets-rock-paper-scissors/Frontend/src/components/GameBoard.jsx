@@ -1,26 +1,22 @@
-import  { useState } from "react";
-import socket from "../socket";  // import socket connection
-// import { useContext } from "react";
-// import { GameContext } from "../context/GameContext";
+import React, { useContext } from "react";
+import { GameContext } from "../context/GameContext";
+import socket from "../socket";
 
 const GameBoard = () => {
-  const [choice, setChoice] = useState("");
+  const { room } = useContext(GameContext);
 
-
-  const handleChoice = (selection) => {
-    setChoice(selection);
-    socket.emit("player-choice", selection);  // Send player's choice to the backend
+  const handleChoice = (choice) => {
+    if (room) {
+      console.log("choice", choice);
+      socket.emit("playerChoice", { room, choice });
+    }
   };
 
   return (
     <div className="game-board">
-      <h2>Select Your Move</h2>
-      <div>
-        <button onClick={() => handleChoice("rock")}>Rock</button>
-        <button onClick={() => handleChoice("paper")}>Paper</button>
-        <button onClick={() => handleChoice("scissors")}>Scissors</button>
-      </div>
-      {choice && <p>Your choice: {choice}</p>}
+      <button onClick={() => handleChoice("rock")}>Rock</button>
+      <button onClick={() => handleChoice("paper")}>Paper</button>
+      <button onClick={() => handleChoice("scissors")}>Scissors</button>
     </div>
   );
 };
