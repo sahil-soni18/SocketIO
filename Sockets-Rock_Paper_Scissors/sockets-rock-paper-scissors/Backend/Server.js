@@ -52,9 +52,17 @@ io.on("connection", (socket) => {
   // Handle player choice
   socket.on("playerChoice", ({ room, choice }) => {
     if (!roomData[room]) return;
-
+  
     roomData[room].choices[socket.id] = choice;
-
+  
+    console.log(`Player ${socket.id} chose ${choice} in room ${room}`); // Debugging
+  
+    // Notify the room about the updated choices
+    io.to(room).emit("roomState", {
+      players: roomData[room].players,
+      choices: roomData[room].choices,
+    });
+  
     // Check if both players have chosen
     if (
       Object.keys(roomData[room].choices).length === 2 &&
@@ -63,19 +71,20 @@ io.on("connection", (socket) => {
       const [player1, player2] = roomData[room].players;
       const player1Choice = roomData[room].choices[player1];
       const player2Choice = roomData[room].choices[player2];
-
-      console.log("Player 1:", player1Choice);
-      console.log("Player 2:", player2Choice);
-
+  
+      console.log("Player 1:", player1Choice); // Debugging
+      console.log("Player 2:", player2Choice); // Debugging
+  
       const result = determineMultiplayerWinner(player1Choice, player2Choice);
-
+      console.log("Game result:", result); // Debugging
+  
       // Emit game result to the room
       io.to(room).emit("gameResult", {
         result,
         player1: { id: player1, choice: player1Choice },
         player2: { id: player2, choice: player2Choice },
       });
-
+  
       // Reset room choices for next round
       roomData[room].choices = {};
     }

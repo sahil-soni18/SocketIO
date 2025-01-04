@@ -13,13 +13,24 @@ const Game = () => {
     playAgain,
   } = useContext(GameContext);
 
+  console.log("*******************************************");
+  console.log("room", room);
+  console.log("players", players);
+  console.log("score", score);
+  console.log("playerChoice", playerChoice);
+  console.log("opponentChoice", opponentChoice);
+  console.log("result", result);
+  console.log("*******************************************");
+
   const handleChoice = (choice) => {
     if (!room) {
       alert("You must join a room to play!");
       return;
     }
+
+    console.log("Printing the Choice in Game,jsx", choice);
     // Emit the player's choice to the server
-    socket.emit("choiceMade", { room, choice });
+    socket.emit("playerChoice", { room, choice });
   };
 
   return (

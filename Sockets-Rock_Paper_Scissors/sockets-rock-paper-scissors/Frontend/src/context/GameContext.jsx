@@ -14,7 +14,7 @@ export const GameProvider = ({ children }) => {
 
   useEffect(() => {
     // Listen for game results
-    socket.on("game-result", (gameResult) => {
+    socket.on("gameResult", (gameResult) => {
       setResult(gameResult.result);
       setPlayerChoice(gameResult.playerChoice);
       setOpponentChoice(gameResult.opponentChoice);
@@ -30,9 +30,18 @@ export const GameProvider = ({ children }) => {
       setPlayers(state.players); // Update the players list
     });
 
+    // Listen for player choices
+    socket.on("playerChoice", (choices) => {
+      console.log("Received player choices:", choices); // Debugging
+      setPlayerChoice(choices.playerChoice);
+      setOpponentChoice(choices.opponentChoice);
+    });
+
+    // Cleanup listeners on unmount
     return () => {
       socket.off("game-result");
       socket.off("roomState");
+      socket.off("playerChoice");
     };
   }, []);
 
@@ -47,6 +56,8 @@ export const GameProvider = ({ children }) => {
     setOpponentChoice("");
     socket.emit("playAgain", room);
   };
+
+  console.log("Player Choice in context:", playerChoice); // Debugging
 
   return (
     <GameContext.Provider
@@ -66,7 +77,6 @@ export const GameProvider = ({ children }) => {
     </GameContext.Provider>
   );
 };
-
 
 // Define prop types
 GameProvider.propTypes = {
