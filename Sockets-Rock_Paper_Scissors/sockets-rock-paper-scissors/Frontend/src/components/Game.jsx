@@ -24,14 +24,12 @@ const Game = () => {
 
   const handleChoice = (choice) => {
     if (!room) {
-      alert("You must join a room to play!");
+      alert("You must join a room first!");
       return;
     }
-
-    console.log("Printing the Choice in Game,jsx", choice);
-    // Emit the player's choice to the server
-    socket.emit("playerChoice", { room, choice });
+    socket.emit("choiceMade", { room, choice });
   };
+  
 
   return (
     <div>

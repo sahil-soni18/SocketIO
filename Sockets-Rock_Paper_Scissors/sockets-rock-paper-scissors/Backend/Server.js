@@ -50,45 +50,67 @@ io.on("connection", (socket) => {
   });
 
   // Handle player choice
-  socket.on("playerChoice", ({ room, choice }) => {
+  socket.on("choiceMade", ({ room, choice }) => {
     if (!roomData[room]) return;
   
+    // Save the player's choice
     roomData[room].choices[socket.id] = choice;
   
-    console.log(`Player ${socket.id} chose ${choice} in room ${room}`); // Debugging
-  
-    // Notify the room about the updated choices
-    io.to(room).emit("roomState", {
-      players: roomData[room].players,
-      choices: roomData[room].choices,
-    });
-  
-    // Check if both players have chosen
+    // Check if both players have made their choices
+    const playerIds = roomData[room].players;
     if (
-      Object.keys(roomData[room].choices).length === 2 &&
-      roomData[room].players.length === 2
+      playerIds.length === 2 &&
+      roomData[room].choices[playerIds[0]] &&
+      roomData[room].choices[playerIds[1]]
     ) {
-      const [player1, player2] = roomData[room].players;
-      const player1Choice = roomData[room].choices[player1];
-      const player2Choice = roomData[room].choices[player2];
+      const player1Choice = roomData[room].choices[playerIds[0]];
+      const player2Choice = roomData[room].choices[playerIds[1]];
   
-      console.log("Player 1:", player1Choice); // Debugging
-      console.log("Player 2:", player2Choice); // Debugging
-  
+      // Determine the winner
       const result = determineMultiplayerWinner(player1Choice, player2Choice);
-      console.log("Game result:", result); // Debugging
   
-      // Emit game result to the room
-      io.to(room).emit("gameResult", {
-        result,
-        player1: { id: player1, choice: player1Choice },
-        player2: { id: player2, choice: player2Choice },
-      });
+      // Initialize scores if not already present
+      if (!roomData[room].scores) {
+        roomData[room].scores = { [playerIds[0]]: 0, [playerIds[1]]: 0 };
+      }
   
-      // Reset room choices for next round
+      // let winnerId = null;
+      // if (result === "Player 1 wins!") {
+      //   winnerId = playerIds[0];
+      //   roomData[room].scores[playerIds[0]] += 1;
+      // } else if (result === "Player 2 wins!") {
+      //   winnerId = playerIds[1];
+      //   roomData[room].scores[playerIds[1]] += 1;
+      // }
+
+      console.log("result", result);
+      console.log("player1Choice", player1Choice);
+      console.log("player2Choice", player2Choice);
+      // console.log("winnerId", winnerId);
+      console.log("scores", roomData[room].scores);
+      console.log("----------------------------------------");
+      
+      
+      const winnerId =
+      result === "Player 1 wins!"
+      ? playerIds[0]
+      : result === "Player 2 wins!"
+      ? playerIds[1]
+      : null;
+      
+      console.log("winnerId", winnerId);
+io.to(room).emit("gameResult", {
+  result,
+  playerChoices: { [playerIds[0]]: player1Choice, [playerIds[1]]: player2Choice },
+  winnerId,
+});
+  
+      // Reset choices for the next round
       roomData[room].choices = {};
     }
   });
+  
+  
 
   // Handle "play again" logic
   socket.on("playAgain", (room) => {

@@ -1,0 +1,21 @@
+.result-display {
+    text-align: center;
+    padding: 20px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+  }
+  
+  .result-display .result-message {
+    font-weight: bold;
+    color: #4caf50; /* Green for success */
+  }
+  
+  .result-display .result-message.lost {
+    color: #f44336; /* Red for failure */
+  }
+  
+  .result-display .result-message.tie {
+    color: #ff9800; /* Orange for tie */
+  }
+  

@@ -10,19 +10,36 @@ export const GameProvider = ({ children }) => {
   const [result, setResult] = useState("");
   const [playerChoice, setPlayerChoice] = useState("");
   const [opponentChoice, setOpponentChoice] = useState("");
-  const [players, setPlayers] = useState([]); // New state to track players in the room
+  const [players, setPlayers] = useState([]); // Track players in the room
 
   useEffect(() => {
-    // Listen for game results
-    socket.on("gameResult", (gameResult) => {
-      setResult(gameResult.result);
-      setPlayerChoice(gameResult.playerChoice);
-      setOpponentChoice(gameResult.opponentChoice);
+    socket.on("gameResult", (resultData) => {
+      console.log("Game Result Received:", resultData);
+  
+      // Set result
+      setResult(resultData.result);
+      console.log("Player Choices:", resultData.playerChoices);
+      console.log("Socket ID:", socket.id);
+    
 
-      setScore((prevScore) => ({
-        ...prevScore,
-        [gameResult.winner]: prevScore[gameResult.winner] + 1,
-      }));
+  
+      // Update scores from server
+      const { scores, winnerId } = resultData;
+      setScore({
+        player: scores[socket.id] || 0,
+        opponent:
+          scores[
+            Object.keys(scores).find((id) => id !== socket.id)
+          ] || 0,
+      });
+  
+      // Set choices
+      setPlayerChoice(resultData.playerChoices[socket.id]);
+      setOpponentChoice(
+        resultData.playerChoices[
+          Object.keys(resultData.playerChoices).find((id) => id !== socket.id)
+        ]
+      );
     });
 
     // Listen for room state updates
@@ -30,18 +47,10 @@ export const GameProvider = ({ children }) => {
       setPlayers(state.players); // Update the players list
     });
 
-    // Listen for player choices
-    socket.on("playerChoice", (choices) => {
-      console.log("Received player choices:", choices); // Debugging
-      setPlayerChoice(choices.playerChoice);
-      setOpponentChoice(choices.opponentChoice);
-    });
-
     // Cleanup listeners on unmount
     return () => {
-      socket.off("game-result");
+      socket.off("gameResult");
       socket.off("roomState");
-      socket.off("playerChoice");
     };
   }, []);
 
@@ -56,8 +65,6 @@ export const GameProvider = ({ children }) => {
     setOpponentChoice("");
     socket.emit("playAgain", room);
   };
-
-  console.log("Player Choice in context:", playerChoice); // Debugging
 
   return (
     <GameContext.Provider
